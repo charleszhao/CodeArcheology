@@ -1,12 +1,12 @@
 import { Buffer } from "node:buffer";
-import { JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN } from "./constants.mjs";
+import { JIRA_BASE_URL, JIRA_EMAIL } from "./constants.mjs";
 
 export function isJiraConfigured() {
-  return !!(JIRA_BASE_URL && JIRA_EMAIL && JIRA_API_TOKEN);
+  return !!(JIRA_BASE_URL && JIRA_EMAIL && process.env.JIRA_API_TOKEN);
 }
 
 function authHeader() {
-  const creds = Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+  const creds = Buffer.from(`${JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString("base64");
   return `Basic ${creds}`;
 }
 
