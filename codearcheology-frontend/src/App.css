@@ -277,3 +277,31 @@ textarea {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.jira-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.jira-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+}
+
+    .jira-card h3 {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    .jira-card h4 {
+        margin-bottom: 8px;
+    }
+
+.jira-meta {
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+}
