@@ -26,7 +26,15 @@
       "Bash(git filter-branch *)",
       "Bash(git stash *)",
       "Bash(xargs -I{} git update-ref -d {} git reflog expire --expire=now --all git gc --prune=now --quiet echo \"Done\" git log --all --oneline -- codearcheology-backend/constants.mjs)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git commit *)",
+      "Read(//private/tmp/**)",
+      "Bash(jobs)",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_console_messages",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_snapshot",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__click",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__fill"
     ]
   }
 }
