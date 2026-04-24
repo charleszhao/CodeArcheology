@@ -1,0 +1,27 @@
+{
+  "name": "codearcheology",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@genspark/cli": "^1.0.13"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charleszhao/CodeArcheology.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/charleszhao/CodeArcheology/issues"
+  },
+  "homepage": "https://github.com/charleszhao/CodeArcheology#readme"
+}

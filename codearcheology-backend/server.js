@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import Anthropic from "@anthropic-ai/sdk";
+import { isJiraConfigured, pushTicketsToJira } from "./jira.mjs";
+import { isGensparkConfigured, createGensparkDocument } from "./genspark.mjs";
 
 dotenv.config();
 
@@ -238,12 +240,35 @@ ${truncateCode(code)}
       return res.status(502).json({ error: "Model returned incomplete analysis." });
     }
 
-    res.json({
+    const analysis = {
       summary: parsed.summary,
       rules: parsed.rules,
       mermaid: parsed.mermaid,
       redZones: Array.isArray(parsed.redZones) ? parsed.redZones : [],
-    });
+    };
+
+    // Step 2: auto-run modernization
+    let modernization = null;
+    try {
+      console.log("Running modernization...");
+      modernization = await runModernization(analysis);
+    } catch (modErr) {
+      console.error("Modernization failed (continuing):", modErr.message);
+    }
+
+    // Step 3: generate tickets from analysis + modernization, push to Jira
+    let jiraTickets = [];
+    let jiraCreated = [];
+    try {
+      console.log("Creating Jira tickets...");
+      const jira = await autoCreateJiraTickets(analysis, modernization);
+      jiraTickets = jira.tickets;
+      jiraCreated = jira.created;
+    } catch (jiraErr) {
+      console.error("Jira auto-push failed (continuing):", jiraErr.message);
+    }
+
+    res.json({ ...analysis, modernization, jiraTickets, jiraCreated });
   } catch (err) {
     console.error(err);
 
@@ -389,6 +414,170 @@ Requirements:
     }
 
     res.status(500).json({ error: err.message || "Modernization failed" });
+  }
+});
+
+app.get("/api/jira/config", (req, res) => {
+  res.json({ configured: isJiraConfigured() });
+});
+
+async function runModernization(analysis) {
+  const prompt = `
+You are a modernization architect.
+
+Given this extracted legacy system understanding:
+${JSON.stringify(analysis, null, 2)}
+
+Suggest:
+1. 4 to 6 modernization opportunities
+2. 3 to 5 migration risks
+
+Return STRICT JSON with this exact schema:
+{
+  "suggestions": ["Suggestion 1", "Suggestion 2"],
+  "risks": ["Risk 1", "Risk 2"]
+}
+
+Requirements:
+- Be practical and enterprise-focused.
+- Each suggestion must be one concise sentence.
+- Each risk must be one concise sentence.
+- Return JSON only. No markdown. No code fences.
+`;
+  const raw = await callClaude(prompt, 2500);
+  const parsed = safeParseJson(raw);
+  if (!Array.isArray(parsed.suggestions) || !Array.isArray(parsed.risks)) {
+    throw new Error("Modernization returned incomplete output.");
+  }
+  return { suggestions: parsed.suggestions, risks: parsed.risks };
+}
+
+function buildJiraTicketPrompt(analysis, modernization) {
+  return `
+You are a Jira project manager creating a complete sprint backlog from a legacy code analysis and modernization plan.
+
+## Analysis
+${JSON.stringify(analysis, null, 2)}
+
+## Modernization Plan
+${JSON.stringify(modernization, null, 2)}
+
+Create two groups of tickets:
+1. One "Story" ticket per redZone entry — these address identified risks.
+2. One "Task" ticket per modernization suggestion — these implement improvements.
+
+Return STRICT JSON with this exact schema:
+{
+  "tickets": [
+    {
+      "title": "Action-oriented title starting with a verb (Fix, Extract, Decouple, Implement, etc.)",
+      "type": "Story",
+      "priority": "High",
+      "description": "One paragraph explaining the specific issue and its business impact",
+      "acceptanceCriteria": [
+        "Specific measurable criterion 1",
+        "Specific measurable criterion 2",
+        "Specific measurable criterion 3"
+      ]
+    }
+  ]
+}
+
+Rules:
+- redZone tickets: type="Story", priority must match redZone level exactly (High/Medium/Low).
+- modernization tickets: type="Task", priority="Medium".
+- title must be action-oriented, referencing the specific risk or suggestion.
+- Each ticket needs exactly 3 testable acceptance criteria.
+- Return JSON only. No markdown. No explanation outside the JSON.
+`;
+}
+
+async function generateTicketSpecs(analysis, modernization) {
+  const raw = await callClaude(buildJiraTicketPrompt(analysis, modernization), 4000);
+  const parsed = safeParseJson(raw);
+  return Array.isArray(parsed.tickets) ? parsed.tickets : [];
+}
+
+async function autoCreateJiraTickets(analysis, modernization) {
+  if (!isJiraConfigured() || !process.env.JIRA_PROJECT_KEY) return { tickets: [], created: [] };
+
+  const tickets = await generateTicketSpecs(analysis, modernization);
+  if (!tickets.length) return { tickets: [], created: [] };
+
+  const created = await pushTicketsToJira(tickets, process.env.JIRA_PROJECT_KEY.trim().toUpperCase());
+  return { tickets, created };
+}
+
+app.post("/api/generate-jira-tickets", async (req, res) => {
+  try {
+    const { analysis, modernization } = req.body;
+    if (!analysis || typeof analysis !== "object") {
+      return res.status(400).json({ error: "Analysis data is required." });
+    }
+    const mod = modernization || await runModernization(analysis);
+    const tickets = await generateTicketSpecs(analysis, mod);
+    res.json({ tickets });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Ticket generation failed" });
+  }
+});
+
+app.post("/api/jira/push", async (req, res) => {
+  try {
+    if (!isJiraConfigured()) {
+      return res.status(503).json({
+        error: "Jira not configured. Add JIRA_BASE_URL, JIRA_EMAIL, and JIRA_API_TOKEN to .env",
+      });
+    }
+
+    const { tickets, projectKey } = req.body;
+
+    if (!Array.isArray(tickets) || tickets.length === 0) {
+      return res.status(400).json({ error: "tickets array is required." });
+    }
+
+    if (!projectKey || typeof projectKey !== "string") {
+      return res.status(400).json({ error: "Jira project key is required." });
+    }
+
+    const created = await pushTicketsToJira(tickets, projectKey.trim().toUpperCase());
+    res.json({ created });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Jira push failed" });
+  }
+});
+
+app.get("/api/genspark/config", (req, res) => {
+  res.json({ configured: isGensparkConfigured() });
+});
+
+app.post("/api/genspark/create-doc", async (req, res) => {
+  try {
+    if (!isGensparkConfigured()) {
+      return res.status(503).json({
+        error: "Genspark not configured. Add GENSPARK_API_KEY to .env",
+      });
+    }
+
+    const { analysis, modernization, jiraTickets, sourceLabel } = req.body;
+
+    if (!analysis || typeof analysis !== "object") {
+      return res.status(400).json({ error: "Analysis data is required." });
+    }
+
+    const result = await createGensparkDocument({
+      analysis,
+      modernization: modernization || null,
+      jiraTickets: jiraTickets || [],
+      sourceLabel: sourceLabel || "",
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("[Genspark] create-doc error:", err);
+    res.status(500).json({ error: err.message || "Genspark document creation failed" });
   }
 });
 

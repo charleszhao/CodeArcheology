@@ -2,6 +2,121 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import mermaid from "mermaid";
 import "./App.css";
 
+const ANALYZING_QUOTES = [
+  { text: "Asking Claude to read 10,000 lines of Java so you don't have to.", author: "— Anthropic, probably" },
+  { text: "Our AI just found a TODO comment from 2003. It says 'fix this later'. Narrator: it was not fixed.", author: "— CodeArcheology" },
+  { text: "Anthropic built Claude to be helpful, harmless, and honest. This code is none of those things.", author: "— An honest assessment" },
+  { text: "Genspark agents are double-checking Claude's work. Claude is fine with it. Claude is NOT fine with it.", author: "— Internal sources" },
+  { text: "Currently decoding business logic written by someone who left the company in 2008 and can't be reached.", author: "— CodeArcheology" },
+  { text: "Claude has now read more legacy code today than a senior dev reads in a calendar year.", author: "— Anthropic Usage Stats" },
+  { text: "Did you know? 78% of legacy code comments say 'don't touch this'. Claude touches it anyway.", author: "— Genspark Research" },
+  { text: "Claude is legally required to pretend this COBOL makes sense. Please respect its professionalism.", author: "— Anthropic Legal" },
+  { text: "The Genspark AI team is watching this analysis live and taking notes. No pressure.", author: "— Genspark HQ" },
+  { text: "This code has more edge cases than a dodecahedron. Claude is excited. Claude is lying.", author: "— CodeArcheology" },
+];
+
+function AnalyzingOverlay() {
+  const [quoteIdx, setQuoteIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setQuoteIdx((i) => (i + 1) % ANALYZING_QUOTES.length);
+        setVisible(true);
+      }, 400);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, []);
+
+  const quote = ANALYZING_QUOTES[quoteIdx];
+
+  return (
+    <div className="analyzing-overlay">
+      <div className="analyzing-bg-grid" />
+
+      <div className="analyzing-center">
+        <div className="analyzing-orb">
+          <div className="analyzing-orb-ring" />
+          <div className="analyzing-orb-ring ring2" />
+          <span className="analyzing-icon">⛏️</span>
+        </div>
+
+        <h2 className="analyzing-title">Excavating your code</h2>
+
+        <div className="analyzing-dots">
+          <span /><span /><span />
+        </div>
+
+        <div className={`analyzing-quote-wrap ${visible ? "fade-in" : "fade-out"}`}>
+          <p className="analyzing-quote-text">"{quote.text}"</p>
+          <p className="analyzing-quote-author">{quote.author}</p>
+        </div>
+
+        <div className="analyzing-badges">
+          <span className="analyzing-badge">⚡ Powered by Claude</span>
+          <span className="analyzing-badge">🚀 Genspark</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const MODERNIZING_QUOTES = [
+  { text: "Running modernization analysis, modernizing suggestions, creating Jira tickets… Claude is multitasking harder than your entire engineering team.", author: "— CodeArcheology" },
+  { text: "Asking Claude to figure out what 'fix this later' means. It's been 20 years. Claude is optimistic.", author: "— Anthropic Support" },
+  { text: "Genspark and Claude are negotiating which legacy pattern to kill first. COBOL is sweating.", author: "— Genspark Internal" },
+  { text: "Generating your modernization roadmap. ETA: faster than your last sprint planning session.", author: "— CodeArcheology" },
+  { text: "Claude is now creating Jira tickets so precise that developers will actually read them. History is being made.", author: "— Anthropic R&D" },
+  { text: "Converting spaghetti code into actionable tickets. Claude brought a fork.", author: "— CodeArcheology" },
+  { text: "Genspark agents are double-checking the ticket priorities. Claude said 'everything is High'. They disagreed.", author: "— Genspark QA" },
+];
+
+function ModernizingOverlay() {
+  const [quoteIdx, setQuoteIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setQuoteIdx((i) => (i + 1) % MODERNIZING_QUOTES.length);
+        setVisible(true);
+      }, 400);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, []);
+
+  const quote = MODERNIZING_QUOTES[quoteIdx];
+
+  return (
+    <div className="analyzing-overlay modernizing-overlay">
+      <div className="analyzing-bg-grid" />
+      <div className="analyzing-center">
+        <div className="analyzing-orb">
+          <div className="analyzing-orb-ring" />
+          <div className="analyzing-orb-ring ring2" />
+          <span className="analyzing-icon">🚀</span>
+        </div>
+        <h2 className="analyzing-title">Modernizing & creating Jira tickets</h2>
+        <div className="analyzing-dots">
+          <span /><span /><span />
+        </div>
+        <div className={`analyzing-quote-wrap ${visible ? "fade-in" : "fade-out"}`}>
+          <p className="analyzing-quote-text">"{quote.text}"</p>
+          <p className="analyzing-quote-author">{quote.author}</p>
+        </div>
+        <div className="analyzing-badges">
+          <span className="analyzing-badge">⚡ Powered by Claude</span>
+          <span className="analyzing-badge">🚀 Genspark</span>
+          <span className="analyzing-badge">🎫 Jira</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 mermaid.initialize({ startOnLoad: false, securityLevel: "loose" });
 
 const sampleCode = `public BigDecimal calculateGST(Customer customer, BigDecimal amount, String currency) {
@@ -280,6 +395,11 @@ export default function App() {
     const [loadingAsk, setLoadingAsk] = useState(false);
     const [loadingModernize, setLoadingModernize] = useState(false);
     const [loadingJira, setLoadingJira] = useState(false);
+    const [jiraProjectKey, setJiraProjectKey] = useState("");
+    const [jiraPushResults, setJiraPushResults] = useState(null);
+    const [loadingJiraPush, setLoadingJiraPush] = useState(false);
+    const [gensparkDoc, setGensparkDoc] = useState(null);
+    const [loadingGenspark, setLoadingGenspark] = useState(false);
 
     async function importGithub() {
         setError("");
@@ -333,6 +453,16 @@ export default function App() {
             if (!res.ok) throw new Error(data.error || "Analyze failed");
 
             setAnalysis(data);
+
+            if (data.modernization) {
+                setModernization(data.modernization);
+            }
+            if (Array.isArray(data.jiraTickets) && data.jiraTickets.length > 0) {
+                setJiraTickets(data.jiraTickets);
+            }
+            if (Array.isArray(data.jiraCreated) && data.jiraCreated.length > 0) {
+                setJiraPushResults(data.jiraCreated);
+            }
         } catch (e) {
             setError(e.message);
         } finally {
@@ -409,10 +539,8 @@ export default function App() {
     }
 
     async function getModernizationSuggestions() {
-        console.log("Clicked Get Modernization Suggestions");
         setError("");
         setLoadingModernize(true);
-        setJiraTickets([]);
 
         try {
             if (!analysis) throw new Error("Run analysis first.");
@@ -420,9 +548,6 @@ export default function App() {
             if (mode === "mock") {
                 await new Promise((r) => setTimeout(r, 700));
                 setModernization(sampleModernization);
-                console.log("===== 1 =====");
-                setJiraTickets(sampleJiraTickets);
-                console.log("Jira tickets generated:", sampleJiraTickets);
                 return;
             }
 
@@ -436,7 +561,6 @@ export default function App() {
             if (!res.ok) throw new Error(data.error || "Modernization failed");
 
             setModernization(data);
-            setJiraTickets(sampleJiraTickets);
         } catch (e) {
             setError(e.message);
         } finally {
@@ -444,47 +568,89 @@ export default function App() {
         }
     }
 
-    async function generateJiraTickets() {
+    async function pushToJira() {
         setError("");
-        setLoadingJira(true);
+        setJiraPushResults(null);
+        setLoadingJiraPush(true);
 
         try {
-            if (!analysis) throw new Error("Run analysis first.");
-            if (!modernization) throw new Error("Run modernization first.");
+            if (!jiraTickets.length) throw new Error("Generate tickets first.");
+            if (!jiraProjectKey.trim()) throw new Error("Enter your Jira project key.");
 
             if (mode === "mock") {
-                await new Promise((r) => setTimeout(r, 700));
-                setJiraTickets(sampleJiraTickets);
+                await new Promise((r) => setTimeout(r, 800));
+                setJiraPushResults(
+                    jiraTickets.map((t, i) => ({
+                        key: `${jiraProjectKey.toUpperCase()}-${100 + i}`,
+                        url: `#mock-${i}`,
+                        summary: t.title,
+                        issueType: t.type,
+                        priority: t.priority
+                    }))
+                );
                 return;
             }
 
-            const res = await fetch(
-                "http://localhost:4000/api/generate-jira-tickets",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        analysis,
-                        modernization
-                    })
-                }
-            );
+            const sourceLabel = githubUrl
+                ? githubUrl.split("/").pop()
+                : "";
+
+            const res = await fetch("http://localhost:4000/api/jira/push", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tickets: jiraTickets,
+                    projectKey: jiraProjectKey.trim(),
+                    sourceLabel
+                })
+            });
 
             const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || "Failed to generate Jira tickets");
-            }
+            if (!res.ok) throw new Error(data.error || "Jira push failed");
 
-            setJiraTickets(Array.isArray(data.tickets) ? data.tickets : []);
+            setJiraPushResults(data.created);
         } catch (e) {
             setError(e.message);
-
-            // Demo-safe fallback
-            if (mode === "api") {
-                setJiraTickets(sampleJiraTickets);
-            }
         } finally {
-            setLoadingJira(false);
+            setLoadingJiraPush(false);
+        }
+    }
+
+    async function generateDocument() {
+        setError("");
+        setGensparkDoc(null);
+        setLoadingGenspark(true);
+
+        try {
+            if (!analysis) throw new Error("Run analysis first.");
+
+            if (mode === "mock") {
+                await new Promise((r) => setTimeout(r, 1200));
+                setGensparkDoc({ documentUrl: "#mock-doc", message: "Mock document generated" });
+                return;
+            }
+
+            const sourceLabel = githubUrl ? githubUrl.split("/").pop() : "";
+
+            const res = await fetch("http://localhost:4000/api/genspark/create-doc", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    analysis,
+                    modernization,
+                    jiraTickets,
+                    sourceLabel
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Document generation failed");
+
+            setGensparkDoc(data);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoadingGenspark(false);
         }
     }
 
@@ -503,6 +669,8 @@ export default function App() {
 
     return (
         <div className="page">
+            {loadingAnalyze && <AnalyzingOverlay />}
+            {loadingModernize && <ModernizingOverlay />}
             <div className="topbar">
                 <div>
                     <h1>CodeArcheology</h1>
@@ -719,50 +887,137 @@ export default function App() {
             </div>
 
             <div className="panel jira-panel">
-                <h2>Jira-Ready Tickets</h2>
-
-                <div className="row ask-row">
-                    <button
-                        onClick={generateJiraTickets}
-                        disabled={loadingJira || !modernization}
-                    >
-                        {loadingJira
-                            ? "Generating..."
-                            : "Generate Jira Backlog from Modernization"}
-                    </button>
+                <div className="jira-panel-header">
+                    <h2>Jira-Ready Tickets</h2>
+                    <span className="jira-auto-badge">Auto-created on Analyze</span>
                 </div>
 
                 {loadingJira ? (
                     <div className="empty">
-                        Generating Jira-ready tickets from modernization plan...
+                        Creating Jira tickets...
                     </div>
                 ) : jiraTickets.length > 0 ? (
-                    <div className="jira-grid">
-                        {jiraTickets.map((ticket, i) => (
-                            <div className="jira-card" key={i}>
-                                <div className="risk-top">
-                                    <h3>{ticket.title}</h3>
-                                    <span className={`badge ${ticket.priority?.toLowerCase()}`}>
-                                        {ticket.priority}
-                                    </span>
+                    <>
+                        <div className="jira-grid">
+                            {jiraTickets.map((ticket, i) => (
+                                <div className="jira-card" key={i}>
+                                    <div className="risk-top">
+                                        <h3>{ticket.title}</h3>
+                                        <span className={`badge ${ticket.priority?.toLowerCase()}`}>
+                                            {ticket.priority}
+                                        </span>
+                                    </div>
+                                    <p className="jira-meta">{ticket.type}</p>
+                                    <p>{ticket.description}</p>
+                                    <h4>Acceptance Criteria</h4>
+                                    <ul>
+                                        {ticket.acceptanceCriteria?.map((item, idx) => (
+                                            <li key={idx}>{item}</li>
+                                        ))}
+                                    </ul>
                                 </div>
+                            ))}
+                        </div>
 
-                                <p className="jira-meta">{ticket.type}</p>
-                                <p>{ticket.description}</p>
-
-                                <h4>Acceptance Criteria</h4>
-                                <ul>
-                                    {ticket.acceptanceCriteria?.map((item, idx) => (
-                                        <li key={idx}>{item}</li>
-                                    ))}
-                                </ul>
+                        <div className="jira-push-section">
+                            <h3>Push to Jira</h3>
+                            <div className="row ask-row">
+                                <input
+                                    value={jiraProjectKey}
+                                    onChange={(e) => setJiraProjectKey(e.target.value.toUpperCase())}
+                                    placeholder="Project key (e.g. ARCH)"
+                                    className="jira-key-input"
+                                />
+                                <button
+                                    onClick={pushToJira}
+                                    disabled={loadingJiraPush || !jiraProjectKey.trim()}
+                                    className="primary"
+                                >
+                                    {loadingJiraPush ? "Pushing..." : `Push ${jiraTickets.length} ticket${jiraTickets.length !== 1 ? "s" : ""} to Jira`}
+                                </button>
                             </div>
-                        ))}
-                    </div>
+
+                            {jiraPushResults ? (
+                                <div className="jira-push-results">
+                                    <h4>Created in Jira</h4>
+                                    <ul>
+                                        {jiraPushResults.map((r, i) => (
+                                            <li key={i}>
+                                                {r.url && r.url !== `#mock-${i}` ? (
+                                                    <a href={r.url} target="_blank" rel="noreferrer">
+                                                        {r.key}
+                                                    </a>
+                                                ) : (
+                                                    <strong>{r.key}</strong>
+                                                )}
+                                                {" — "}{r.summary}
+                                                <span className={`badge ${r.priority?.toLowerCase()}`}>
+                                                    {r.priority}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ) : null}
+                        </div>
+                    </>
                 ) : (
                     <div className="empty">
-                        Generate Jira-ready delivery tickets from the modernization plan.
+                        Jira tickets are created automatically when you run Analyze.
                     </div>
+                )}
+            </div>
+
+            <div className="panel genspark-panel">
+                <div className="genspark-panel-header">
+                    <div>
+                        <h2>Genspark Document</h2>
+                        <p className="genspark-subtitle">
+                            Generate a professional analysis report using the Genspark AI agent.
+                        </p>
+                    </div>
+                    <span className="genspark-badge-logo">🚀 Genspark</span>
+                </div>
+
+                <div className="row ask-row">
+                    <button
+                        onClick={generateDocument}
+                        disabled={loadingGenspark || !analysis}
+                        className="primary genspark-btn"
+                    >
+                        {loadingGenspark ? "Generating document…" : "Generate Analysis Report"}
+                    </button>
+                </div>
+
+                {loadingGenspark && (
+                    <div className="genspark-loading">
+                        <div className="genspark-spinner" />
+                        <p>Genspark is writing your report — this takes about 30–60 seconds…</p>
+                    </div>
+                )}
+
+                {gensparkDoc && !loadingGenspark && (
+                    <div className="genspark-result">
+                        {gensparkDoc.documentUrl && gensparkDoc.documentUrl !== "#mock-doc" ? (
+                            <>
+                                <p>Your report is ready.</p>
+                                <a
+                                    href={gensparkDoc.documentUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="genspark-doc-link"
+                                >
+                                    Open Document →
+                                </a>
+                            </>
+                        ) : (
+                            <p className="genspark-msg">{gensparkDoc.message || "Document created."}</p>
+                        )}
+                    </div>
+                )}
+
+                {!analysis && !loadingGenspark && !gensparkDoc && (
+                    <div className="empty">Run analysis first to generate a report.</div>
                 )}
             </div>
         </div>
