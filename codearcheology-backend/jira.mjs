@@ -1,15 +1,12 @@
 import { Buffer } from "node:buffer";
-
-const JIRA_BASE_URL = () => process.env.JIRA_BASE_URL?.replace(/\/$/, "");
-const JIRA_EMAIL = () => process.env.JIRA_EMAIL;
-const JIRA_API_TOKEN = () => process.env.JIRA_API_TOKEN;
+import { JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN } from "./constants.mjs";
 
 export function isJiraConfigured() {
-  return !!(JIRA_BASE_URL() && JIRA_EMAIL() && JIRA_API_TOKEN());
+  return !!(JIRA_BASE_URL && JIRA_EMAIL && JIRA_API_TOKEN);
 }
 
 function authHeader() {
-  const creds = Buffer.from(`${JIRA_EMAIL()}:${JIRA_API_TOKEN()}`).toString("base64");
+  const creds = Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
   return `Basic ${creds}`;
 }
 
@@ -22,7 +19,7 @@ function toAdf(text) {
 }
 
 export async function createJiraIssue({ projectKey, summary, description, issueType, priority }) {
-  const res = await fetch(`${JIRA_BASE_URL()}/rest/api/3/issue`, {
+  const res = await fetch(`${JIRA_BASE_URL}/rest/api/3/issue`, {
     method: "POST",
     headers: {
       Authorization: authHeader(),
@@ -83,7 +80,7 @@ export async function pushTicketsToJira(tickets, projectKey) {
 
     created.push({
       key: issue.key,
-      url: `${JIRA_BASE_URL()}/browse/${issue.key}`,
+      url: `${JIRA_BASE_URL}/browse/${issue.key}`,
       summary: ticket.title,
       issueType: ticket.type || "Task",
       priority: ticket.priority || "Medium",

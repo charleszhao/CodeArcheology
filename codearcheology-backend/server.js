@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import Anthropic from "@anthropic-ai/sdk";
 import { isJiraConfigured, pushTicketsToJira } from "./jira.mjs";
-import { isGensparkConfigured, createGensparkDocument } from "./genspark.mjs";
+import { JIRA_PROJECT_KEY } from "./constants.mjs";
 
 dotenv.config();
 
@@ -499,12 +499,12 @@ async function generateTicketSpecs(analysis, modernization) {
 }
 
 async function autoCreateJiraTickets(analysis, modernization) {
-  if (!isJiraConfigured() || !process.env.JIRA_PROJECT_KEY) return { tickets: [], created: [] };
+  if (!isJiraConfigured()) return { tickets: [], created: [] };
 
   const tickets = await generateTicketSpecs(analysis, modernization);
   if (!tickets.length) return { tickets: [], created: [] };
 
-  const created = await pushTicketsToJira(tickets, process.env.JIRA_PROJECT_KEY.trim().toUpperCase());
+  const created = await pushTicketsToJira(tickets, JIRA_PROJECT_KEY.trim().toUpperCase());
   return { tickets, created };
 }
 
@@ -546,38 +546,6 @@ app.post("/api/jira/push", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Jira push failed" });
-  }
-});
-
-app.get("/api/genspark/config", (req, res) => {
-  res.json({ configured: isGensparkConfigured() });
-});
-
-app.post("/api/genspark/create-doc", async (req, res) => {
-  try {
-    if (!isGensparkConfigured()) {
-      return res.status(503).json({
-        error: "Genspark not configured. Add GENSPARK_API_KEY to .env",
-      });
-    }
-
-    const { analysis, modernization, jiraTickets, sourceLabel } = req.body;
-
-    if (!analysis || typeof analysis !== "object") {
-      return res.status(400).json({ error: "Analysis data is required." });
-    }
-
-    const result = await createGensparkDocument({
-      analysis,
-      modernization: modernization || null,
-      jiraTickets: jiraTickets || [],
-      sourceLabel: sourceLabel || "",
-    });
-
-    res.json(result);
-  } catch (err) {
-    console.error("[Genspark] create-doc error:", err);
-    res.status(500).json({ error: err.message || "Genspark document creation failed" });
   }
 });
 
