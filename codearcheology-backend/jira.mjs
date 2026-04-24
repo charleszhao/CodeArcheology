@@ -63,7 +63,6 @@ function sanitizeIssueType(type) {
 
 export async function pushTicketsToJira(tickets, projectKey) {
   const created = [];
-
   for (const ticket of tickets) {
     const issue = await createJiraIssue({
       projectKey,
@@ -77,7 +76,6 @@ export async function pushTicketsToJira(tickets, projectKey) {
       issueType: sanitizeIssueType(ticket.type),
       priority: ticket.priority || "Medium",
     });
-
     created.push({
       key: issue.key,
       url: `${JIRA_BASE_URL}/browse/${issue.key}`,
@@ -86,6 +84,34 @@ export async function pushTicketsToJira(tickets, projectKey) {
       priority: ticket.priority || "Medium",
     });
   }
+  return created;
+}
 
+export async function pushTicketsToJiraStreaming(tickets, projectKey, onProgress) {
+  const created = [];
+  for (let i = 0; i < tickets.length; i++) {
+    const ticket = tickets[i];
+    const issue = await createJiraIssue({
+      projectKey,
+      summary: ticket.title,
+      description: [
+        ticket.description,
+        "",
+        "Acceptance Criteria:",
+        ...(ticket.acceptanceCriteria || []).map((c) => `- ${c}`),
+      ].join("\n"),
+      issueType: sanitizeIssueType(ticket.type),
+      priority: ticket.priority || "Medium",
+    });
+    const result = {
+      key: issue.key,
+      url: `${JIRA_BASE_URL}/browse/${issue.key}`,
+      summary: ticket.title,
+      issueType: ticket.type || "Task",
+      priority: ticket.priority || "Medium",
+    };
+    created.push(result);
+    onProgress(i + 1, tickets.length, result);
+  }
   return created;
 }

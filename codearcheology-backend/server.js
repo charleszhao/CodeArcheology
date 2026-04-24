@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import Anthropic from "@anthropic-ai/sdk";
-import { isJiraConfigured, pushTicketsToJira } from "./jira.mjs";
+import { isJiraConfigured, pushTicketsToJira, pushTicketsToJiraStreaming } from "./jira.mjs";
 import { JIRA_PROJECT_KEY } from "./constants.mjs";
 
 dotenv.config();
@@ -488,21 +488,38 @@ async function autoCreateJiraTickets(analysis, modernization) {
 }
 
 app.post("/api/generate-jira-tickets", async (req, res) => {
+  res.setHeader("Content-Type", "application/x-ndjson");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("X-Accel-Buffering", "no");
+
+  const send = (obj) => res.write(JSON.stringify(obj) + "\n");
+
   try {
     const { analysis, modernization } = req.body;
     if (!analysis || typeof analysis !== "object") {
-      return res.status(400).json({ error: "Analysis data is required." });
+      send({ type: "error", message: "Analysis data is required." });
+      return res.end();
     }
+
     const mod = modernization || await runModernization(analysis);
     const tickets = await generateTicketSpecs(analysis, mod);
-    let created = [];
+
+    send({ type: "tickets", tickets, total: tickets.length });
+
     if (isJiraConfigured() && tickets.length) {
-      created = await pushTicketsToJira(tickets, JIRA_PROJECT_KEY.trim().toUpperCase());
+      await pushTicketsToJiraStreaming(
+        tickets,
+        JIRA_PROJECT_KEY.trim().toUpperCase(),
+        (current, total, result) => send({ type: "progress", current, total, result })
+      );
     }
-    res.json({ tickets, created });
+
+    send({ type: "done" });
+    res.end();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message || "Ticket generation failed" });
+    send({ type: "error", message: err.message || "Ticket generation failed" });
+    res.end();
   }
 });
 
