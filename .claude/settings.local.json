@@ -21,7 +21,12 @@
       "Bash(curl *)",
       "Bash(echo \"Backend up: $\\(curl -s http://localhost:4000/api/health\\)\")",
       "Bash(echo \"Backend: $\\(curl -s http://localhost:4000/api/health\\)\")",
-      "WebSearch"
+      "WebSearch",
+      "Bash(pip3 show *)",
+      "Bash(git filter-branch *)",
+      "Bash(git stash *)",
+      "Bash(xargs -I{} git update-ref -d {} git reflog expire --expire=now --all git gc --prune=now --quiet echo \"Done\" git log --all --oneline -- codearcheology-backend/constants.mjs)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

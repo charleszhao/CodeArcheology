@@ -488,38 +488,17 @@ async function autoCreateJiraTickets(analysis, modernization) {
 }
 
 app.post("/api/generate-jira-tickets", async (req, res) => {
-  res.setHeader("Content-Type", "application/x-ndjson");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("X-Accel-Buffering", "no");
-
-  const send = (obj) => res.write(JSON.stringify(obj) + "\n");
-
   try {
     const { analysis, modernization } = req.body;
     if (!analysis || typeof analysis !== "object") {
-      send({ type: "error", message: "Analysis data is required." });
-      return res.end();
+      return res.status(400).json({ error: "Analysis data is required." });
     }
-
     const mod = modernization || await runModernization(analysis);
     const tickets = await generateTicketSpecs(analysis, mod);
-
-    send({ type: "tickets", tickets, total: tickets.length });
-
-    if (isJiraConfigured() && tickets.length) {
-      await pushTicketsToJiraStreaming(
-        tickets,
-        JIRA_PROJECT_KEY.trim().toUpperCase(),
-        (current, total, result) => send({ type: "progress", current, total, result })
-      );
-    }
-
-    send({ type: "done" });
-    res.end();
+    res.json({ tickets });
   } catch (err) {
     console.error(err);
-    send({ type: "error", message: err.message || "Ticket generation failed" });
-    res.end();
+    res.status(500).json({ error: err.message || "Ticket generation failed" });
   }
 });
 
