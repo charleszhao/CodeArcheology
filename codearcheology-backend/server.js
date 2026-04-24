@@ -247,28 +247,7 @@ ${truncateCode(code)}
       redZones: Array.isArray(parsed.redZones) ? parsed.redZones : [],
     };
 
-    // Step 2: auto-run modernization
-    let modernization = null;
-    try {
-      console.log("Running modernization...");
-      modernization = await runModernization(analysis);
-    } catch (modErr) {
-      console.error("Modernization failed (continuing):", modErr.message);
-    }
-
-    // Step 3: generate tickets from analysis + modernization, push to Jira
-    let jiraTickets = [];
-    let jiraCreated = [];
-    try {
-      console.log("Creating Jira tickets...");
-      const jira = await autoCreateJiraTickets(analysis, modernization);
-      jiraTickets = jira.tickets;
-      jiraCreated = jira.created;
-    } catch (jiraErr) {
-      console.error("Jira auto-push failed (continuing):", jiraErr.message);
-    }
-
-    res.json({ ...analysis, modernization, jiraTickets, jiraCreated });
+    res.json(analysis);
   } catch (err) {
     console.error(err);
 
@@ -516,7 +495,11 @@ app.post("/api/generate-jira-tickets", async (req, res) => {
     }
     const mod = modernization || await runModernization(analysis);
     const tickets = await generateTicketSpecs(analysis, mod);
-    res.json({ tickets });
+    let created = [];
+    if (isJiraConfigured() && tickets.length) {
+      created = await pushTicketsToJira(tickets, JIRA_PROJECT_KEY.trim().toUpperCase());
+    }
+    res.json({ tickets, created });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Ticket generation failed" });
